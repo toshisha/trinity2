@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Search, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat } from 'lucide-react'
+import { Search, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, Music } from 'lucide-react'
 import Image from 'next/image'
 import { AnimatedVolumeControl } from './animated-volume-control'
 
@@ -11,10 +11,12 @@ interface Track {
   artist: string
   duration: number
   url: string
+  coverArt: string | null
 }
 
 export default function MusicPlayer() {
   const [tracks, setTracks] = useState<Track[]>([])
+  const [error, setError] = useState<string | null>(null)
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
@@ -26,25 +28,22 @@ export default function MusicPlayer() {
   const progressRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    fetch('/api/tracks')
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`)
-        }
-        return res.json()
-      })
-      .then(data => {
-        if (Array.isArray(data)) {
-          setTracks(data)
-        } else {
-          console.error('Invalid data format received')
-          setTracks([])
-        }
-      })
-      .catch(error => {
-        console.error('Error fetching tracks:', error)
+    const fetchTracks = async () => {
+      try {
+        const res = await fetch('/api/tracks')
+        if (!res.ok) throw new Error('Failed to fetch tracks')
+        const data = await res.json()
+        if (!Array.isArray(data)) throw new Error('Invalid data format')
+        setTracks(data)
+        setError(null)
+      } catch (err) {
+        console.error('Error fetching tracks:', err)
+        setError('Failed to load tracks. Please try again later.')
         setTracks([])
-      })
+      }
+    }
+
+    fetchTracks()
   }, [])
 
   useEffect(() => {
@@ -170,7 +169,7 @@ export default function MusicPlayer() {
           <Image
             src="/logo.svg"
             alt="MAFWBH logo"
-            width={154}
+            width={120}
             height={40}
             priority
           />
@@ -189,8 +188,9 @@ export default function MusicPlayer() {
 
       <div className="flex-1 p-4 overflow-hidden pb-36">
         <div className="border border-white/10 rounded-md h-full flex flex-col">
-          <div className="grid grid-cols-[48px_1fr_1fr_80px] gap-3 text-sm opacity-60 px-4 py-2 border-b border-white/10">
+          <div className="grid grid-cols-[48px_48px_1fr_1fr_80px] gap-3 text-xs font-medium text-white/60 px-4 py-2 border-b border-white/10">
             <div className="text-center">#</div>
+            <div></div>
             <div>Title</div>
             <div>Artist</div>
             <div className="text-right pr-2">Duration</div>
@@ -198,7 +198,7 @@ export default function MusicPlayer() {
 
           {filteredTracks.length === 0 ? (
             <div className="text-center py-8 opacity-60">
-              <p className="text-sm">No songs found</p>
+              {error ? <p className="text-sm">{error}</p> : <p className="text-sm">No songs found</p>}
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -206,14 +206,29 @@ export default function MusicPlayer() {
                 <button
                   key={track.id}
                   onClick={() => playTrack(track)}
-                  className={`w-full grid grid-cols-[48px_1fr_1fr_80px] gap-3 text-sm px-4 py-2 hover:bg-white/5 transition-colors items-center ${
+                  className={`w-full grid grid-cols-[48px_48px_1fr_1fr_80px] gap-3 text-xs px-4 py-1.5 hover:bg-white/5 transition-colors items-center ${
                     currentTrack?.id === track.id ? 'bg-white/5' : ''
                   }`}
                 >
-                  <div className="text-center opacity-60">{index + 1}</div>
+                  <div className="text-center text-white/60">{index + 1}</div>
+                  <div className="flex items-center justify-center">
+                    {track.coverArt ? (
+                      <Image
+                        src={track.coverArt}
+                        alt={`Cover for ${track.title}`}
+                        width={32}
+                        height={32}
+                        className="rounded-sm"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 bg-white/10 rounded-sm flex items-center justify-center">
+                        <Music className="w-4 h-4 text-white/60" />
+                      </div>
+                    )}
+                  </div>
                   <div className="text-left truncate">{track.title}</div>
-                  <div className="text-left opacity-60 truncate">{track.artist}</div>
-                  <div className="text-right opacity-60 pr-2">
+                  <div className="text-left text-white/60 truncate">{track.artist}</div>
+                  <div className="text-right text-white/60 pr-2">
                     {formatTime(track.duration)}
                   </div>
                 </button>
