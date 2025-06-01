@@ -1,5 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { Volume2, VolumeX } from 'lucide-react'
+"use client"
+
+import type React from "react"
+import { useState, useRef, useEffect } from "react"
+import { Volume2, VolumeX, Volume1 } from "lucide-react"
 
 interface AnimatedVolumeControlProps {
   volume: number
@@ -17,11 +20,19 @@ export const AnimatedVolumeControl: React.FC<AnimatedVolumeControlProps> = ({ vo
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener("mousedown", handleClickOutside)
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener("mousedown", handleClickOutside)
     }
   }, [])
+
+  const getVolumeIcon = () => {
+    if (volume === 0) return <VolumeX className="w-5 h-5" />
+    if (volume < 0.5) return <Volume1 className="w-5 h-5" />
+    return <Volume2 className="w-5 h-5" />
+  }
+
+  const volumePercentage = Math.round(volume * 100)
 
   return (
     <div ref={controlRef} className="relative flex items-center">
@@ -29,26 +40,54 @@ export const AnimatedVolumeControl: React.FC<AnimatedVolumeControlProps> = ({ vo
         {!isOpen ? (
           <button
             onClick={() => setIsOpen(true)}
-            className="p-2 opacity-60 hover:opacity-100 transition-opacity focus:outline-none focus:ring-2 focus:ring-white/20 rounded-full"
+            className="group p-2 opacity-60 hover:opacity-100 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/20 rounded-full hover:bg-white/5"
             aria-label="Open volume control"
           >
-            {volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+            {getVolumeIcon()}
           </button>
         ) : (
-          <div className="flex items-center bg-black border border-white/20 rounded-lg px-3 py-2">
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={volume}
-              onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
-              className="w-[120px] accent-white [&::-webkit-slider-runnable-track]:h-[2px] [&::-webkit-slider-runnable-track]:bg-white/20 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:mt-[-6px] [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:duration-150 [&:hover::-webkit-slider-thumb]:scale-125"
-            />
+          <div className="flex items-center bg-black/90 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 shadow-2xl animate-in slide-in-from-bottom-2 duration-200">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => onVolumeChange(volume === 0 ? 0.5 : 0)}
+                className="opacity-60 hover:opacity-100 transition-opacity"
+                aria-label={volume === 0 ? "Unmute" : "Mute"}
+              >
+                {getVolumeIcon()}
+              </button>
+
+              <div className="relative flex items-center gap-3">
+                <div className="relative w-32 h-2">
+                  <div className="absolute inset-0 bg-white/10 rounded-full"></div>
+                  <div
+                    className="absolute left-0 top-0 h-full bg-gradient-to-r from-white/60 to-white rounded-full transition-all duration-150"
+                    style={{ width: `${volumePercentage}%` }}
+                  ></div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={volume}
+                    onChange={(e) => onVolumeChange(Number.parseFloat(e.target.value))}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    aria-label="Volume slider"
+                  />
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg border-2 border-white/20 transition-all duration-150 hover:scale-110 cursor-pointer"
+                    style={{
+                      left: `calc(${volumePercentage}% - 8px)`,
+                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
+                    }}
+                  />
+                </div>
+
+                <div className="text-xs font-medium text-white/80 min-w-[2rem] text-center">{volumePercentage}%</div>
+              </div>
+            </div>
           </div>
         )}
       </div>
     </div>
   )
 }
-
